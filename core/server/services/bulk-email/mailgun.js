@@ -1,7 +1,7 @@
 const {URL} = require('url');
 const mailgun = require('mailgun-js');
-const common = require('../../lib/common');
-const configService = require('../../config');
+const logging = require('../../../shared/logging');
+const configService = require('../../../shared/config');
 const settingsCache = require('../settings/cache');
 
 function createMailgun(config) {
@@ -11,7 +11,7 @@ function createMailgun(config) {
         apiKey: config.apiKey,
         domain: config.domain,
         protocol: baseUrl.protocol,
-        host: baseUrl.host,
+        host: baseUrl.hostname,
         port: baseUrl.port,
         endpoint: baseUrl.pathname,
         retry: 5
@@ -20,17 +20,22 @@ function createMailgun(config) {
 
 function getInstance() {
     const bulkEmailConfig = configService.get('bulkEmail');
-    const bulkEmailSetting = settingsCache.get('bulk_email_settings');
+    const bulkEmailSetting = {
+        apiKey: settingsCache.get('mailgun_api_key'),
+        domain: settingsCache.get('mailgun_domain'),
+        baseUrl: settingsCache.get('mailgun_base_url')
+    };
     const hasMailgunConfig = !!(bulkEmailConfig && bulkEmailConfig.mailgun);
     const hasMailgunSetting = !!(bulkEmailSetting && bulkEmailSetting.apiKey && bulkEmailSetting.baseUrl && bulkEmailSetting.domain);
+
     if (!hasMailgunConfig && !hasMailgunSetting) {
-        common.logging.warn(`Bulk email service is not configured`);
+        logging.warn(`Bulk email service is not configured`);
     } else {
         try {
             let mailgunConfig = hasMailgunConfig ? bulkEmailConfig.mailgun : bulkEmailSetting;
             return createMailgun(mailgunConfig);
         } catch (err) {
-            common.logging.warn(`Bulk email service is not configured`);
+            logging.warn(`Bulk email service is not configured`);
         }
     }
     return null;

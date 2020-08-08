@@ -3,7 +3,7 @@ const _ = require('lodash');
 const supertest = require('supertest');
 const os = require('os');
 const fs = require('fs-extra');
-const config = require('../../../core/server/config');
+const config = require('../../../core/shared/config');
 const testUtils = require('../../utils');
 const localUtils = require('./utils');
 const ghost = testUtils.startGhost;
@@ -39,7 +39,7 @@ describe('Settings API', function () {
                 }
 
                 should.not.exist(res.headers['x-cache-invalidate']);
-                var jsonResponse = res.body;
+                const jsonResponse = res.body;
                 should.exist(jsonResponse);
 
                 localUtils.API.checkResponse(jsonResponse, 'settings');
@@ -80,7 +80,7 @@ describe('Settings API', function () {
 
                 jsonResponse.settings.length.should.eql(1);
 
-                testUtils.API.checkResponseValue(jsonResponse.settings[0], ['id', 'key', 'value', 'type', 'created_at', 'updated_at']);
+                testUtils.API.checkResponseValue(jsonResponse.settings[0], ['id', 'group', 'key', 'value', 'type', 'flags', 'created_at', 'updated_at']);
                 jsonResponse.settings[0].key.should.eql('codeinjection_head');
                 testUtils.API.isISO8601(jsonResponse.settings[0].created_at).should.be.true();
                 done();
@@ -97,68 +97,77 @@ describe('Settings API', function () {
                     return done(err);
                 }
 
-                var jsonResponse = res.body,
-                    changedValue = [],
-                    settingToChange = {
-                        settings: [
-                            {
-                                key: 'title',
-                                value: changedValue
-                            },
-                            {
-                                key: 'codeinjection_head',
-                                value: null
-                            },
-                            {
-                                key: 'navigation',
-                                value: {label: 'label1'}
-                            },
-                            {
-                                key: 'slack',
-                                value: JSON.stringify({username: 'username'})
-                            },
-                            {
-                                key: 'is_private',
-                                value: false
-                            },
-                            {
-                                key: 'meta_title',
-                                value: 'SEO title'
-                            },
-                            {
-                                key: 'meta_description',
-                                value: 'SEO description'
-                            },
-                            {
-                                key: 'og_image',
-                                value: '/content/images/2019/07/facebook.png'
-                            },
-                            {
-                                key: 'og_title',
-                                value: 'facebook title'
-                            },
-                            {
-                                key: 'og_description',
-                                value: 'facebook description'
-                            },
-                            {
-                                key: 'twitter_image',
-                                value: '/content/images/2019/07/twitter.png'
-                            },
-                            {
-                                key: 'twitter_title',
-                                value: 'twitter title'
-                            },
-                            {
-                                key: 'twitter_description',
-                                value: 'twitter description'
-                            },
-                            {
-                                key: 'labs',
-                                value: '{"subscribers":false,"members":true}'
-                            }
-                        ]
-                    };
+                const jsonResponse = res.body;
+                const changedValue = [];
+
+                const settingToChange = {
+                    settings: [
+                        {
+                            key: 'title',
+                            value: changedValue
+                        },
+                        {
+                            key: 'codeinjection_head',
+                            value: null
+                        },
+                        {
+                            key: 'navigation',
+                            value: {label: 'label1'}
+                        },
+                        {
+                            key: 'slack',
+                            value: JSON.stringify({username: 'username'})
+                        },
+                        {
+                            key: 'is_private',
+                            value: false
+                        },
+                        {
+                            key: 'meta_title',
+                            value: 'SEO title'
+                        },
+                        {
+                            key: 'meta_description',
+                            value: 'SEO description'
+                        },
+                        {
+                            key: 'og_image',
+                            value: '/content/images/2019/07/facebook.png'
+                        },
+                        {
+                            key: 'og_title',
+                            value: 'facebook title'
+                        },
+                        {
+                            key: 'og_description',
+                            value: 'facebook description'
+                        },
+                        {
+                            key: 'twitter_image',
+                            value: '/content/images/2019/07/twitter.png'
+                        },
+                        {
+                            key: 'twitter_title',
+                            value: 'twitter title'
+                        },
+                        {
+                            key: 'twitter_description',
+                            value: 'twitter description'
+                        },
+                        {
+                            key: 'labs',
+                            value: '{"subscribers":false,"members":true}'
+                        },
+                        {
+                            key: 'lang',
+                            value: 'ua'
+                        },
+                        {
+                            key: 'timezone',
+                            value: 'Pacific/Auckland'
+                        }
+                    ]
+                };
 
                 should.exist(jsonResponse);
                 should.exist(jsonResponse.settings);
@@ -222,6 +231,12 @@ describe('Settings API', function () {
 
                         putBody.settings[13].key.should.eql('labs');
                         should.equal(putBody.settings[13].value, '{"subscribers":false,"members":true}');
+
+                        putBody.settings[14].key.should.eql('lang');
+                        should.equal(putBody.settings[14].value, 'ua');
+
+                        putBody.settings[15].key.should.eql('timezone');
+                        should.equal(putBody.settings[15].value, 'Pacific/Auckland');
 
                         localUtils.API.checkResponse(putBody, 'settings');
                         done();

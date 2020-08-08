@@ -3,7 +3,7 @@ const supertest = require('supertest');
 const _ = require('lodash');
 const url = require('url');
 const configUtils = require('../../utils/configUtils');
-const config = require('../../../core/server/config');
+const config = require('../../../core/shared/config');
 const models = require('../../../core/server/models');
 const testUtils = require('../../utils');
 const localUtils = require('./utils');
@@ -43,7 +43,7 @@ describe('Authors Content API', function () {
                 }
 
                 should.not.exist(res.headers['x-cache-invalidate']);
-                var jsonResponse = res.body;
+                const jsonResponse = res.body;
                 should.exist(jsonResponse.authors);
                 localUtils.API.checkResponse(jsonResponse, 'authors');
                 jsonResponse.authors.should.have.length(3);
@@ -79,7 +79,7 @@ describe('Authors Content API', function () {
                     return done(err);
                 }
 
-                var jsonResponse = res.body;
+                const jsonResponse = res.body;
 
                 should.exist(jsonResponse.authors);
                 jsonResponse.authors.should.have.length(3);
@@ -117,7 +117,7 @@ describe('Authors Content API', function () {
                 }
 
                 should.not.exist(res.headers['x-cache-invalidate']);
-                var jsonResponse = res.body;
+                const jsonResponse = res.body;
 
                 should.exist(jsonResponse.authors);
                 jsonResponse.authors.should.have.length(1);
@@ -140,7 +140,7 @@ describe('Authors Content API', function () {
                 }
 
                 should.not.exist(res.headers['x-cache-invalidate']);
-                var jsonResponse = res.body;
+                const jsonResponse = res.body;
 
                 should.exist(jsonResponse.authors);
                 jsonResponse.authors.should.have.length(1);

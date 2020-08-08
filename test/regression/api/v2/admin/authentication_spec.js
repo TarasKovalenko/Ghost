@@ -6,7 +6,7 @@ const testUtils = require('../../../../utils/index');
 const models = require('../../../../../core/server/models/index');
 const security = require('../../../../../core/server/lib/security/index');
 const settingsCache = require('../../../../../core/server/services/settings/cache');
-const config = require('../../../../../core/server/config/index');
+const config = require('../../../../../core/shared/config/index');
 const mailService = require('../../../../../core/server/services/mail/index');
 const configUtils = require('../../../../utils/configUtils');
 
@@ -361,7 +361,7 @@ describe('Authentication API v2', function () {
         it('reset password', function (done) {
             models.User.getOwnerUser(testUtils.context.internal)
                 .then(function (ownerUser) {
-                    var token = security.tokens.resetToken.generateHash({
+                    const token = security.tokens.resetToken.generateHash({
                         expires: Date.now() + (1000 * 60),
                         email: user.email,
                         dbHash: settingsCache.get('db_hash'),

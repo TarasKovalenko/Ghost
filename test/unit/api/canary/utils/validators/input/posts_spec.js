@@ -1,8 +1,8 @@
+const errors = require('@tryghost/errors');
 const _ = require('lodash');
 const should = require('should');
 const sinon = require('sinon');
 const Promise = require('bluebird');
-const common = require('../../../../../../../core/server/lib/common');
 const validators = require('../../../../../../../core/server/api/canary/utils/validators');
 
 describe('Unit: canary/utils/validators/input/posts', function () {
@@ -25,7 +25,7 @@ describe('Unit: canary/utils/validators/input/posts', function () {
                 return validators.input.posts.add(apiConfig, frame)
                     .then(Promise.reject)
                     .catch((err) => {
-                        (err instanceof common.errors.ValidationError).should.be.true();
+                        (err instanceof errors.ValidationError).should.be.true();
                     });
             });
 
@@ -40,7 +40,7 @@ describe('Unit: canary/utils/validators/input/posts', function () {
                 return validators.input.posts.add(apiConfig, frame)
                     .then(Promise.reject)
                     .catch((err) => {
-                        (err instanceof common.errors.ValidationError).should.be.true();
+                        (err instanceof errors.ValidationError).should.be.true();
                     });
             });
 
@@ -55,7 +55,7 @@ describe('Unit: canary/utils/validators/input/posts', function () {
                 return validators.input.posts.add(apiConfig, frame)
                     .then(Promise.reject)
                     .catch((err) => {
-                        (err instanceof common.errors.ValidationError).should.be.true();
+                        (err instanceof errors.ValidationError).should.be.true();
                     });
             });
 
@@ -71,7 +71,7 @@ describe('Unit: canary/utils/validators/input/posts', function () {
                 return validators.input.posts.add(apiConfig, frame)
                     .then(Promise.reject)
                     .catch((err) => {
-                        (err instanceof common.errors.ValidationError).should.be.true();
+                        (err instanceof errors.ValidationError).should.be.true();
                     });
             });
 
@@ -88,7 +88,7 @@ describe('Unit: canary/utils/validators/input/posts', function () {
                 return validators.input.posts.add(apiConfig, frame)
                     .then(Promise.reject)
                     .catch((err) => {
-                        (err instanceof common.errors.ValidationError).should.be.true();
+                        (err instanceof errors.ValidationError).should.be.true();
                     });
             });
 
@@ -140,7 +140,7 @@ describe('Unit: canary/utils/validators/input/posts', function () {
             const fieldMap = {
                 title: [123, new Date(), _.repeat('a', 2001)],
                 slug: [123, new Date(), _.repeat('a', 192)],
-                mobiledoc: [123, new Date()],
+                mobiledoc: [123, new Date(), 'a'],
                 feature_image: [123, new Date(), 'random words'],
                 featured: [123, new Date(), 'abc'],
                 status: [123, new Date(), 'abc'],
@@ -172,7 +172,7 @@ describe('Unit: canary/utils/validators/input/posts', function () {
                         return validators.input.posts.add(apiConfig, frame)
                             .then(Promise.reject)
                             .catch((err) => {
-                                (err instanceof common.errors.ValidationError).should.be.true();
+                                (err instanceof errors.ValidationError).should.be.true();
                             });
                     });
 
@@ -198,7 +198,7 @@ describe('Unit: canary/utils/validators/input/posts', function () {
                 return validators.input.posts.add(apiConfig, frame)
                     .then(Promise.reject)
                     .catch((err) => {
-                        (err instanceof common.errors.ValidationError).should.be.true();
+                        (err instanceof errors.ValidationError).should.be.true();
                     });
             });
 
@@ -220,7 +220,7 @@ describe('Unit: canary/utils/validators/input/posts', function () {
                 return validators.input.posts.add(apiConfig, frame)
                     .then(Promise.reject)
                     .catch((err) => {
-                        (err instanceof common.errors.ValidationError).should.be.true();
+                        (err instanceof errors.ValidationError).should.be.true();
                     });
             });
 
@@ -260,7 +260,7 @@ describe('Unit: canary/utils/validators/input/posts', function () {
                 return validators.input.posts.edit(apiConfig, frame)
                     .then(Promise.reject)
                     .catch((err) => {
-                        (err instanceof common.errors.ValidationError).should.be.true();
+                        (err instanceof errors.ValidationError).should.be.true();
                     });
             });
 
@@ -275,7 +275,7 @@ describe('Unit: canary/utils/validators/input/posts', function () {
                 return validators.input.posts.edit(apiConfig, frame)
                     .then(Promise.reject)
                     .catch((err) => {
-                        (err instanceof common.errors.ValidationError).should.be.true();
+                        (err instanceof errors.ValidationError).should.be.true();
                     });
             });
 
@@ -291,7 +291,7 @@ describe('Unit: canary/utils/validators/input/posts', function () {
                 return validators.input.posts.edit(apiConfig, frame)
                     .then(Promise.reject)
                     .catch((err) => {
-                        (err instanceof common.errors.ValidationError).should.be.true();
+                        (err instanceof errors.ValidationError).should.be.true();
                     });
             });
 
@@ -327,7 +327,7 @@ describe('Unit: canary/utils/validators/input/posts', function () {
                 return validators.input.posts.edit(apiConfig, frame)
                     .then(Promise.reject)
                     .catch((err) => {
-                        (err instanceof common.errors.ValidationError).should.be.true();
+                        (err instanceof errors.ValidationError).should.be.true();
                     });
             });
 
@@ -349,7 +349,7 @@ describe('Unit: canary/utils/validators/input/posts', function () {
                 return validators.input.posts.edit(apiConfig, frame)
                     .then(Promise.reject)
                     .catch((err) => {
-                        (err instanceof common.errors.ValidationError).should.be.true();
+                        (err instanceof errors.ValidationError).should.be.true();
                     });
             });
 

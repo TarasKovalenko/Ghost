@@ -2,7 +2,7 @@ const ghostBookshelf = require('./base');
 const uuid = require('uuid');
 const _ = require('lodash');
 const sequence = require('../lib/promise/sequence');
-const config = require('../config');
+const config = require('../../shared/config');
 const crypto = require('crypto');
 
 const Member = ghostBookshelf.Model.extend({
@@ -15,16 +15,26 @@ const Member = ghostBookshelf.Model.extend({
         };
     },
 
-    relationships: ['labels'],
+    relationships: ['labels', 'stripeCustomers'],
 
     relationshipBelongsTo: {
-        labels: 'labels'
+        labels: 'labels',
+        stripeCustomers: 'members_stripe_customers'
     },
 
     labels: function labels() {
         return this.belongsToMany('Label', 'members_labels', 'member_id', 'label_id')
             .withPivot('sort_order')
-            .query('orderBy', 'sort_order', 'ASC');
+            .query('orderBy', 'sort_order', 'ASC')
+            .query((qb) => {
+                // avoids bookshelf adding a `DISTINCT` to the query
+                // we know the result set will already be unique and DISTINCT hurts query performance
+                qb.columns('labels.*');
+            });
+    },
+
+    stripeCustomers() {
+        return this.hasMany('MemberStripeCustomer', 'member_id', 'id');
     },
 
     emitChange: function emitChange(event, options) {
@@ -154,6 +164,45 @@ const Member = ghostBookshelf.Model.extend({
         return options;
     },
 
+    searchQuery: function searchQuery(queryBuilder, query) {
+        queryBuilder.where('members.name', 'like', `%${query}%`);
+        queryBuilder.orWhere('members.email', 'like', `%${query}%`);
+    },
+
+    // TODO: hacky way to filter by members with an active subscription,
+    // replace with a proper way to do this via filter param.
+    // NOTE: assumes members will have a single subscription
+    customQuery: function customQuery(queryBuilder, options) {
+        if (options.paid === true) {
+            queryBuilder.innerJoin(
+                'members_stripe_customers',
+                'members.id',
+                'members_stripe_customers.member_id'
+            );
+            queryBuilder.innerJoin(
+                'members_stripe_customers_subscriptions',
+                function () {
+                    this.on(
+                        'members_stripe_customers.customer_id',
+                        'members_stripe_customers_subscriptions.customer_id'
+                    ).andOn(
+                        'members_stripe_customers_subscriptions.status',
+                        ghostBookshelf.knex.raw('?', ['active'])
+                    );
+                }
+            );
+        }
+
+        if (options.paid === false) {
+            queryBuilder.leftJoin(
+                'members_stripe_customers',
+                'members.id',
+                'members_stripe_customers.member_id'
+            );
+            queryBuilder.whereNull('members_stripe_customers.member_id');
+        }
+    },
+
     toJSON(unfilteredOptions) {
         const options = Member.filterOptions(unfilteredOptions, 'toJSON');
         const attrs = ghostBookshelf.Model.prototype.toJSON.call(this, options);
@@ -168,6 +217,49 @@ const Member = ghostBookshelf.Model.extend({
         }
 
         return attrs;
+    }
+}, {
+    /**
+     * Returns an array of keys permitted in a method's `options` hash, depending on the current method.
+     * @param {String} methodName The name of the method to check valid options for.
+     * @return {Array} Keys allowed in the `options` hash of the model's method.
+     */
+    permittedOptions: function permittedOptions(methodName) {
+        let options = ghostBookshelf.Model.permittedOptions.call(this, methodName);
+
+        if (['findPage', 'findAll'].includes(methodName)) {
+            // TODO: remove 'paid' once it's possible to use in a filter
+            options = options.concat(['search', 'paid']);
+        }
+
+        return options;
+    },
+
+    add(data, unfilteredOptions = {}) {
+        if (!unfilteredOptions.transacting) {
+            return ghostBookshelf.transaction((transacting) => {
+                return this.add(data, Object.assign({transacting}, unfilteredOptions));
+            });
+        }
+        return ghostBookshelf.Model.add.call(this, data, unfilteredOptions);
+    },
+
+    edit(data, unfilteredOptions = {}) {
+        if (!unfilteredOptions.transacting) {
+            return ghostBookshelf.transaction((transacting) => {
+                return this.edit(data, Object.assign({transacting}, unfilteredOptions));
+            });
+        }
+        return ghostBookshelf.Model.edit.call(this, data, unfilteredOptions);
+    },
+
+    destroy(unfilteredOptions = {}) {
+        if (!unfilteredOptions.transacting) {
+            return ghostBookshelf.transaction((transacting) => {
+                return this.destroy(Object.assign({transacting}, unfilteredOptions));
+            });
+        }
+        return ghostBookshelf.Model.destroy.call(this, unfilteredOptions);
     }
 });
 

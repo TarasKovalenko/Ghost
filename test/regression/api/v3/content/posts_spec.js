@@ -8,7 +8,7 @@ const testUtils = require('../../../../utils');
 const localUtils = require('./utils');
 const configUtils = require('../../../../utils/configUtils');
 const urlUtils = require('../../../../utils/urlUtils');
-const config = require('../../../../../core/server/config');
+const config = require('../../../../../core/shared/config');
 
 const ghost = testUtils.startGhost;
 let request;
@@ -46,7 +46,7 @@ describe('api/v3/content/posts', function () {
                 should.exist(res.headers['access-control-allow-origin']);
                 should.not.exist(res.headers['x-cache-invalidate']);
 
-                var jsonResponse = res.body;
+                const jsonResponse = res.body;
                 should.exist(jsonResponse.posts);
                 localUtils.API.checkResponse(jsonResponse, 'posts');
                 jsonResponse.posts.should.have.length(11);
@@ -87,7 +87,7 @@ describe('api/v3/content/posts', function () {
                 should.exist(res.headers['access-control-allow-origin']);
                 should.not.exist(res.headers['x-cache-invalidate']);
 
-                var jsonResponse = res.body;
+                const jsonResponse = res.body;
                 should.exist(jsonResponse.posts);
                 localUtils.API.checkResponse(jsonResponse, 'posts');
                 jsonResponse.posts.should.have.length(11);
@@ -347,7 +347,7 @@ describe('api/v3/content/posts', function () {
                     should.exist(jsonResponse.posts);
                     localUtils.API.checkResponse(jsonResponse, 'posts');
                     jsonResponse.posts.should.have.length(14);
-                    localUtils.API.checkResponse(jsonResponse.posts[0], 'post');
+                    localUtils.API.checkResponse(jsonResponse.posts[0], 'post', null, null);
                     localUtils.API.checkResponse(jsonResponse.meta.pagination, 'pagination');
                     _.isBoolean(jsonResponse.posts[0].featured).should.eql(true);
 

@@ -4,14 +4,15 @@ const uuid = require('uuid');
 const moment = require('moment');
 const Promise = require('bluebird');
 const sequence = require('../lib/promise/sequence');
-const common = require('../lib/common');
+const {i18n} = require('../lib/common');
+const errors = require('@tryghost/errors');
 const htmlToText = require('html-to-text');
 const ghostBookshelf = require('./base');
-const config = require('../config');
+const config = require('../../shared/config');
 const settingsCache = require('../services/settings/cache');
-const renderers = require('../lib/mobiledoc/renderers');
+const mobiledocLib = require('../lib/mobiledoc');
 const relations = require('./relations');
-const urlUtils = require('../lib/url-utils');
+const urlUtils = require('../../shared/url-utils');
 const MOBILEDOC_REVISIONS_COUNT = 10;
 const ALL_STATUSES = ['published', 'draft', 'scheduled'];
 
@@ -111,7 +112,7 @@ Post = ghostBookshelf.Model.extend({
             return;
         }
 
-        var status = model.get('status');
+        const status = model.get('status');
 
         model.emitChange('added', options);
 
@@ -215,15 +216,15 @@ Post = ghostBookshelf.Model.extend({
          * For the reason above, `detached` handler is using the scope of `detaching`
          * to access the models that are not present in `detached`.
          */
-        model.related('tags').once('detaching', function onDetached(collection, tag) {
-            model.related('tags').once('detached', function onDetached(detachedCollection, response, options) {
+        model.related('tags').once('detaching', function detachingTags(collection, tag) {
+            model.related('tags').once('detached', function detachedTags(detachedCollection, response, options) {
                 tag.emitChange('detached', options);
                 model.emitChange('tag.detached', options);
             });
         });
 
-        model.related('tags').once('attaching', function onDetached(collection, tags) {
-            model.related('tags').once('attached', function onDetached(detachedCollection, response, options) {
+        model.related('tags').once('attaching', function tagsAttaching(collection, tags) {
+            model.related('tags').once('attached', function tagsAttached(detachedCollection, response, options) {
                 tags.forEach((tag) => {
                     tag.emitChange('attached', options);
                     model.emitChange('tag.attached', options);
@@ -231,14 +232,14 @@ Post = ghostBookshelf.Model.extend({
             });
         });
 
-        model.related('authors').once('detaching', function onDetached(collection, author) {
-            model.related('authors').once('detached', function onDetached(detachedCollection, response, options) {
+        model.related('authors').once('detaching', function authorsDetaching(collection, author) {
+            model.related('authors').once('detached', function authorsDetached(detachedCollection, response, options) {
                 author.emitChange('detached', options);
             });
         });
 
-        model.related('authors').once('attaching', function onDetached(collection, authors) {
-            model.related('authors').once('attached', function onDetached(detachedCollection, response, options) {
+        model.related('authors').once('attaching', function authorsAttaching(collection, authors) {
+            model.related('authors').once('attached', function authorsAttached(detachedCollection, response, options) {
                 authors.forEach(author => author.emitChange('attached', options));
             });
         });
@@ -260,29 +261,31 @@ Post = ghostBookshelf.Model.extend({
         });
     },
 
-    onSaving: function onSaving(model, attr, options) {
+    onSaving: async function onSaving(model, attr, options) {
         options = options || {};
 
-        var self = this,
-            title,
-            i,
-            // Variables to make the slug checking more readable
-            newTitle = this.get('title'),
-            newStatus = this.get('status'),
-            olderStatus = this.previous('status'),
-            prevTitle = this.previous('title'),
-            prevSlug = this.previous('slug'),
-            publishedAt = this.get('published_at'),
-            publishedAtHasChanged = this.hasDateChanged('published_at', {beforeWrite: true}),
-            generatedFields = ['html', 'plaintext'],
-            tagsToSave,
-            ops = [];
+        const self = this;
+        let title;
+        let i;
+
+        // Variables to make the slug checking more readable
+        const newTitle = this.get('title');
+
+        const newStatus = this.get('status');
+        const olderStatus = this.previous('status');
+        const prevTitle = this.previous('title');
+        const prevSlug = this.previous('slug');
+        const publishedAt = this.get('published_at');
+        const publishedAtHasChanged = this.hasDateChanged('published_at', {beforeWrite: true});
+        const generatedFields = ['html', 'plaintext'];
+        let tagsToSave;
+        const ops = [];
 
         // CASE: disallow published -> scheduled
         // @TODO: remove when we have versioning based on updated_at
         if (newStatus !== olderStatus && newStatus === 'scheduled' && olderStatus === 'published') {
-            return Promise.reject(new common.errors.ValidationError({
-                message: common.i18n.t('errors.models.post.isAlreadyPublished', {key: 'status'})
+            return Promise.reject(new errors.ValidationError({
+                message: i18n.t('errors.models.post.isAlreadyPublished', {key: 'status'})
             }));
         }
 
@@ -295,12 +298,12 @@ Post = ghostBookshelf.Model.extend({
         // CASE: both page and post can get scheduled
         if (newStatus === 'scheduled') {
             if (!publishedAt) {
-                return Promise.reject(new common.errors.ValidationError({
-                    message: common.i18n.t('errors.models.post.valueCannotBeBlank', {key: 'published_at'})
+                return Promise.reject(new errors.ValidationError({
+                    message: i18n.t('errors.models.post.valueCannotBeBlank', {key: 'published_at'})
                 }));
             } else if (!moment(publishedAt).isValid()) {
-                return Promise.reject(new common.errors.ValidationError({
-                    message: common.i18n.t('errors.models.post.valueCannotBeBlank', {key: 'published_at'})
+                return Promise.reject(new errors.ValidationError({
+                    message: i18n.t('errors.models.post.valueCannotBeBlank', {key: 'published_at'})
                 }));
                 // CASE: to schedule/reschedule a post, a minimum diff of x minutes is needed (default configured is 2minutes)
             } else if (
@@ -309,8 +312,8 @@ Post = ghostBookshelf.Model.extend({
                 !options.importing &&
                 (!options.context || !options.context.internal)
             ) {
-                return Promise.reject(new common.errors.ValidationError({
-                    message: common.i18n.t('errors.models.post.expectedPublishedAtInFuture', {
+                return Promise.reject(new errors.ValidationError({
+                    message: i18n.t('errors.models.post.expectedPublishedAtInFuture', {
                         cannotScheduleAPostBeforeInMinutes: config.get('times').cannotScheduleAPostBeforeInMinutes
                     })
                 }));
@@ -365,7 +368,7 @@ Post = ghostBookshelf.Model.extend({
         }
 
         if (!this.get('mobiledoc')) {
-            this.set('mobiledoc', JSON.stringify(renderers.mobiledocHtmlRenderer.blankStructure()));
+            this.set('mobiledoc', JSON.stringify(mobiledocLib.blankDocument));
         }
 
         // ensure all URLs are stored as relative
@@ -386,28 +389,39 @@ Post = ghostBookshelf.Model.extend({
             }
         };
 
-        Object.entries(urlTransformMap).forEach(([attr, transform]) => {
+        Object.entries(urlTransformMap).forEach(([attrToTransform, transform]) => {
             let method = transform;
-            let options = {};
+            let transformOptions = {};
 
             if (typeof transform === 'object') {
                 method = transform.method;
-                options = transform.options || {};
+                transformOptions = transform.options || {};
             }
 
-            if (this.hasChanged(attr) && this.get(attr)) {
-                const transformedValue = urlUtils[method](this.get(attr), options);
-                this.set(attr, transformedValue);
+            if (this.hasChanged(attrToTransform) && this.get(attrToTransform)) {
+                const transformedValue = urlUtils[method](this.get(attrToTransform), transformOptions);
+                this.set(attrToTransform, transformedValue);
             }
         });
 
+        // If we're force re-rendering we want to make sure that all image cards
+        // have original dimensions stored in the payload for use by card renderers
+        if (options.force_rerender) {
+            this.set('mobiledoc', await mobiledocLib.populateImageSizes(this.get('mobiledoc')));
+        }
+
         // CASE: mobiledoc has changed, generate html
+        // CASE: ?force_rerender=true passed via Admin API
         // CASE: html is null, but mobiledoc exists (only important for migrations & importing)
-        if (this.hasChanged('mobiledoc') || (!this.get('html') && (options.migrating || options.importing))) {
+        if (
+            this.hasChanged('mobiledoc')
+            || options.force_rerender
+            || (!this.get('html') && (options.migrating || options.importing))
+        ) {
             try {
-                this.set('html', renderers.mobiledocHtmlRenderer.render(JSON.parse(this.get('mobiledoc'))));
+                this.set('html', mobiledocLib.mobiledocHtmlRenderer.render(JSON.parse(this.get('mobiledoc'))));
             } catch (err) {
-                throw new common.errors.ValidationError({
+                throw new errors.ValidationError({
                     message: 'Invalid mobiledoc structure.',
                     help: 'https://ghost.org/docs/concepts/posts/'
                 });
@@ -415,14 +429,20 @@ Post = ghostBookshelf.Model.extend({
         }
 
         if (this.hasChanged('html') || !this.get('plaintext')) {
-            const plaintext = htmlToText.fromString(this.get('html'), {
-                wordwrap: 80,
-                ignoreImage: true,
-                hideLinkHrefIfSameAsText: true,
-                preserveNewlines: true,
-                returnDomByDefault: true,
-                uppercaseHeadings: false
-            });
+            let plaintext;
+
+            if (this.get('html') === null) {
+                plaintext = null;
+            } else {
+                plaintext = htmlToText.fromString(this.get('html'), {
+                    wordwrap: 80,
+                    ignoreImage: true,
+                    hideLinkHrefIfSameAsText: true,
+                    preserveNewlines: true,
+                    returnDomByDefault: true,
+                    uppercaseHeadings: false
+                });
+            }
 
             // CASE: html is e.g. <p></p>
             // @NOTE: Otherwise we will always update the resource to `plaintext: ''` and Bookshelf thinks that this
@@ -434,7 +454,7 @@ Post = ghostBookshelf.Model.extend({
 
         // disabling sanitization until we can implement a better version
         if (!options.importing) {
-            title = this.get('title') || common.i18n.t('errors.models.post.untitled');
+            title = this.get('title') || i18n.t('errors.models.post.untitled');
             this.set('title', _.toString(title).trim());
         }
 
@@ -485,7 +505,7 @@ Post = ghostBookshelf.Model.extend({
                         // After the new slug is found, do another generate for the old title to compare it to the old slug
                         return ghostBookshelf.Model.generateSlug(Post, prevTitle,
                             {status: 'all', transacting: options.transacting, importing: options.importing}
-                        ).then(function then(prevTitleSlug) {
+                        ).then(function prevTitleSlugGenerated(prevTitleSlug) {
                             // If the old slug is the same as the slug that was generated from the old title
                             // then set a new slug. If it is not the same, means was set by the user
                             if (prevTitleSlug === prevSlug) {
@@ -635,8 +655,8 @@ Post = ghostBookshelf.Model.extend({
      * Otherwise we return what is requested e.g. `?formats=mobiledoc,plaintext`
      */
     formatsToJSON: function formatsToJSON(attrs, options) {
-        var defaultFormats = ['html'],
-            formatsToKeep = options.formats || defaultFormats;
+        const defaultFormats = ['html'];
+        const formatsToKeep = options.formats || defaultFormats;
 
         // Iterate over all known formats, and if they are not in the keep list, remove them
         _.each(Post.allowedFormats, function (format) {
@@ -649,8 +669,8 @@ Post = ghostBookshelf.Model.extend({
     },
 
     toJSON: function toJSON(unfilteredOptions) {
-        var options = Post.filterOptions(unfilteredOptions, 'toJSON'),
-            attrs = ghostBookshelf.Model.prototype.toJSON.call(this, options);
+        const options = Post.filterOptions(unfilteredOptions, 'toJSON');
+        let attrs = ghostBookshelf.Model.prototype.toJSON.call(this, options);
 
         attrs = this.formatsToJSON(attrs, options);
 
@@ -669,9 +689,26 @@ Post = ghostBookshelf.Model.extend({
 
         return attrs;
     },
+
+    // NOTE: overloads models base method to take `post_meta` changes into account
+    wasChanged() {
+        if (!this._changed) {
+            return true;
+        }
+
+        const postMetaChanged = this.relations.posts_meta && this.relations.posts_meta._changed && Object.keys(this.relations.posts_meta._changed).length;
+
+        if (!Object.keys(this._changed).length && !postMetaChanged) {
+            return false;
+        }
+
+        return true;
+    },
+
     enforcedFilters: function enforcedFilters(options) {
         return options.context && options.context.public ? 'status:published' : null;
     },
+
     defaultFilters: function defaultFilters(options) {
         if (options.context && options.context.internal) {
             return null;
@@ -769,17 +806,17 @@ Post = ghostBookshelf.Model.extend({
      * @return {Array} Keys allowed in the `options` hash of the model's method.
      */
     permittedOptions: function permittedOptions(methodName) {
-        var options = ghostBookshelf.Model.permittedOptions.call(this, methodName),
+        let options = ghostBookshelf.Model.permittedOptions.call(this, methodName);
 
-            // whitelists for the `options` hash argument on methods, by method name.
-            // these are the only options that can be passed to Bookshelf / Knex.
-            validOptions = {
-                findOne: ['columns', 'importing', 'withRelated', 'require', 'filter'],
-                findPage: ['status'],
-                findAll: ['columns', 'filter'],
-                destroy: ['destroyAll', 'destroyBy'],
-                edit: ['filter', 'send_email_when_published']
-            };
+        // whitelists for the `options` hash argument on methods, by method name.
+        // these are the only options that can be passed to Bookshelf / Knex.
+        const validOptions = {
+            findOne: ['columns', 'importing', 'withRelated', 'require', 'filter'],
+            findPage: ['status'],
+            findAll: ['columns', 'filter'],
+            destroy: ['destroyAll', 'destroyBy'],
+            edit: ['filter', 'send_email_when_published', 'force_rerender']
+        };
 
         // The post model additionally supports having a formats option
         options.push('formats');
@@ -822,8 +859,8 @@ Post = ghostBookshelf.Model.extend({
      * @return {Object} The filtered results of the passed in data, containing only what's allowed in the schema.
      */
     filterData: function filterData(data) {
-        var filteredData = ghostBookshelf.Model.filterData.apply(this, arguments),
-            extraData = _.pick(data, this.prototype.relationships);
+        const filteredData = ghostBookshelf.Model.filterData.apply(this, arguments);
+        const extraData = _.pick(data, this.prototype.relationships);
 
         _.merge(filteredData, extraData);
         return filteredData;
@@ -871,6 +908,13 @@ Post = ghostBookshelf.Model.extend({
                                 // Pass along the updated attributes for checking status changes
                                 found._previousAttributes = post._previousAttributes;
                                 found._changed = post._changed;
+
+                                // NOTE: `posts_meta` fields are equivalent in terms of "wasChanged" logic to the rest of posts's table fields.
+                                //       Keeping track of them is needed to check if anything was changed in post's resource.
+                                if (found.relations.posts_meta) {
+                                    found.relations.posts_meta._changed = post.relations.posts_meta._changed;
+                                }
+
                                 return found;
                             }
                         });
@@ -958,7 +1002,7 @@ Post = ghostBookshelf.Model.extend({
 
         isContributor = loadedPermissions.user && _.some(loadedPermissions.user.roles, {name: 'Contributor'});
         isOwner = loadedPermissions.user && _.some(loadedPermissions.user.roles, {name: 'Owner'});
-        isAdmin = loadedPermissions.user && _.some(loadedPermissions.user.roles, {name: 'Admin'});
+        isAdmin = loadedPermissions.user && _.some(loadedPermissions.user.roles, {name: 'Administrator'});
         isEditor = loadedPermissions.user && _.some(loadedPermissions.user.roles, {name: 'Editor'});
         isIntegration = loadedPermissions.apiKey && _.some(loadedPermissions.apiKey.roles, {name: 'Admin Integration'});
 
@@ -993,8 +1037,8 @@ Post = ghostBookshelf.Model.extend({
             return Promise.resolve({excludedAttrs});
         }
 
-        return Promise.reject(new common.errors.NoPermissionError({
-            message: common.i18n.t('errors.models.post.notEnoughPermission')
+        return Promise.reject(new errors.NoPermissionError({
+            message: i18n.t('errors.models.post.notEnoughPermission')
         }));
     }
 });

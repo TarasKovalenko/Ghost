@@ -1,12 +1,12 @@
-const should = require('should'),
-    sinon = require('sinon'),
-    path = require('path'),
-    ampController = require('../../../../core/frontend/apps/amp/lib/router'),
-    urlService = require('../../../../core/frontend/services/url'),
-    helpers = require('../../../../core/frontend/services/routing/helpers'),
-    common = require('../../../../core/server/lib/common'),
-    testUtils = require('../../../utils'),
-    configUtils = require('../../../utils/configUtils');
+const errors = require('@tryghost/errors');
+const should = require('should');
+const sinon = require('sinon');
+const path = require('path');
+const ampController = require('../../../../core/frontend/apps/amp/lib/router');
+const urlService = require('../../../../core/frontend/services/url');
+const helpers = require('../../../../core/frontend/services/routing/helpers');
+const testUtils = require('../../../utils');
+const configUtils = require('../../../utils/configUtils');
 
 // Helper function to prevent unit tests
 // from failing via timeout when they
@@ -18,10 +18,10 @@ function failTest(done) {
 }
 
 describe('Unit - apps/amp/lib/router', function () {
-    let res,
-        req,
-        defaultPath,
-        rendererStub;
+    let res;
+    let req;
+    let defaultPath;
+    let rendererStub;
 
     beforeEach(function () {
         rendererStub = sinon.stub();
@@ -71,7 +71,7 @@ describe('Unit - apps/amp/lib/router', function () {
             req.body = {};
 
             ampController.renderer(req, res, function (err) {
-                (err instanceof common.errors.NotFoundError).should.be.true();
+                (err instanceof errors.NotFoundError).should.be.true();
                 helpers.renderer.called.should.be.false();
                 done();
             });
@@ -85,7 +85,7 @@ describe('Unit - apps/amp/lib/router', function () {
             };
 
             ampController.renderer(req, res, function (err) {
-                (err instanceof common.errors.NotFoundError).should.be.true();
+                (err instanceof errors.NotFoundError).should.be.true();
                 helpers.renderer.called.should.be.false();
                 done();
             });
@@ -93,7 +93,10 @@ describe('Unit - apps/amp/lib/router', function () {
     });
 
     describe('fn: getPostData', function () {
-        let res, req, entryLookupStub, post;
+        let res;
+        let req;
+        let entryLookupStub;
+        let post;
 
         beforeEach(function () {
             post = testUtils.DataGenerator.forKnex.createPost({slug: 'welcome'});
@@ -155,10 +158,10 @@ describe('Unit - apps/amp/lib/router', function () {
             urlService.getPermalinkByUrl.withArgs('/welcome/').returns('/:slug/');
 
             helpers.entryLookup.withArgs('/welcome/', {permalinks: '/:slug/', query: {controller: 'postsPublic', resource: 'posts'}})
-                .rejects(new common.errors.NotFoundError());
+                .rejects(new errors.NotFoundError());
 
             ampController.getPostData(req, res, function (err) {
-                (err instanceof common.errors.NotFoundError).should.be.true();
+                (err instanceof errors.NotFoundError).should.be.true();
                 done();
             });
         });

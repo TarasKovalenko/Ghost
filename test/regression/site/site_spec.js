@@ -1,15 +1,15 @@
-const should = require('should'),
-    sinon = require('sinon'),
-    _ = require('lodash'),
-    cheerio = require('cheerio'),
-    testUtils = require('../../utils'),
-    mockUtils = require('../../utils/mocks'),
-    configUtils = require('../../utils/configUtils'),
-    urlUtils = require('../../utils/urlUtils'),
-    appService = require('../../../core/frontend/services/apps'),
-    frontendSettingsService = require('../../../core/frontend/services/settings'),
-    themeService = require('../../../core/frontend/services/themes'),
-    siteApp = require('../../../core/server/web/parent-app');
+const should = require('should');
+const sinon = require('sinon');
+const _ = require('lodash');
+const cheerio = require('cheerio');
+const testUtils = require('../../utils');
+const mockUtils = require('../../utils/mocks');
+const configUtils = require('../../utils/configUtils');
+const urlUtils = require('../../utils/urlUtils');
+const appService = require('../../../core/frontend/services/apps');
+const frontendSettingsService = require('../../../core/frontend/services/settings');
+const themeService = require('../../../core/frontend/services/themes');
+const siteApp = require('../../../core/server/web/parent/app');
 
 describe('Integration - Web - Site', function () {
     let app;
@@ -1424,7 +1424,7 @@ describe('Integration - Web - Site', function () {
                             response.statusCode.should.eql(200);
                             response.template.should.eql('default');
 
-                            // default tempalte does not list posts
+                            // default template does not list posts
                             $('.post-card').length.should.equal(0);
                         });
                 });
@@ -1710,7 +1710,7 @@ describe('Integration - Web - Site', function () {
                     .then(function (response) {
                         const $ = cheerio.load(response.body);
                         response.statusCode.should.eql(200);
-                        $('head link')[2].attribs.href.should.eql('https://127.0.0.1:2369/rss/');
+                        $('head link')[1].attribs.href.should.eql('https://127.0.0.1:2369/rss/');
                     });
             });
         });
@@ -3124,7 +3124,7 @@ describe('Integration - Web - Site', function () {
                             response.statusCode.should.eql(200);
                             response.template.should.eql('default');
 
-                            // default tempalte does not list posts
+                            // default template does not list posts
                             $('.post-card').length.should.equal(0);
                         });
                 });
@@ -3410,7 +3410,7 @@ describe('Integration - Web - Site', function () {
                     .then(function (response) {
                         const $ = cheerio.load(response.body);
                         response.statusCode.should.eql(200);
-                        $('head link')[2].attribs.href.should.eql('https://127.0.0.1:2369/rss/');
+                        $('head link')[1].attribs.href.should.eql('https://127.0.0.1:2369/rss/');
                     });
             });
         });
@@ -4824,7 +4824,7 @@ describe('Integration - Web - Site', function () {
                             response.statusCode.should.eql(200);
                             response.template.should.eql('default');
 
-                            // default tempalte does not list posts
+                            // default template does not list posts
                             $('.post-card').length.should.equal(0);
                         });
                 });
@@ -5111,7 +5111,7 @@ describe('Integration - Web - Site', function () {
                     .then(function (response) {
                         const $ = cheerio.load(response.body);
                         response.statusCode.should.eql(200);
-                        $('head link')[2].attribs.href.should.eql('https://127.0.0.1:2369/rss/');
+                        $('head link')[1].attribs.href.should.eql('https://127.0.0.1:2369/rss/');
                     });
             });
         });

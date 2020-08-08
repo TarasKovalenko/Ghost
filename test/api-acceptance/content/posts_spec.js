@@ -6,7 +6,7 @@ const cheerio = require('cheerio');
 const moment = require('moment');
 const testUtils = require('../../utils');
 const configUtils = require('../../utils/configUtils');
-const config = require('../../../core/server/config');
+const config = require('../../../core/shared/config');
 const localUtils = require('./utils');
 
 const ghost = testUtils.startGhost;
@@ -44,7 +44,7 @@ describe('Posts Content API', function () {
                 should.exist(res.headers['access-control-allow-origin']);
                 should.not.exist(res.headers['x-cache-invalidate']);
 
-                var jsonResponse = res.body;
+                const jsonResponse = res.body;
                 should.exist(jsonResponse.posts);
                 localUtils.API.checkResponse(jsonResponse, 'posts');
                 jsonResponse.posts.should.have.length(11);
@@ -257,7 +257,7 @@ describe('Posts Content API', function () {
                 should.exist(res.headers['access-control-allow-origin']);
                 should.not.exist(res.headers['x-cache-invalidate']);
 
-                var jsonResponse = res.body;
+                const jsonResponse = res.body;
                 should.exist(jsonResponse.posts);
                 localUtils.API.checkResponse(jsonResponse, 'posts');
                 jsonResponse.posts.should.have.length(11);
@@ -283,8 +283,8 @@ describe('Posts Content API', function () {
             .expect(200)
             .then(function (res) {
                 should.exist(res.body.posts[0]);
-                var post = res.body.posts[0],
-                    publishedAt = moment(post.published_at).format('YYYY-MM-DD HH:mm:ss');
+                const post = res.body.posts[0];
+                const publishedAt = moment(post.published_at).format('YYYY-MM-DD HH:mm:ss');
 
                 post.title.should.eql('Welcome to Ghost');
 
@@ -297,8 +297,8 @@ describe('Posts Content API', function () {
             })
             .then(function (res) {
                 should.exist(res.body.posts[0]);
-                var post = res.body.posts[0],
-                    publishedAt = moment(post.published_at).format('YYYY-MM-DD HH:mm:ss');
+                const post = res.body.posts[0];
+                const publishedAt = moment(post.published_at).format('YYYY-MM-DD HH:mm:ss');
 
                 post.title.should.eql('Writing posts with Ghost ✍️');
 
@@ -311,7 +311,7 @@ describe('Posts Content API', function () {
             })
             .then(function (res) {
                 should.exist(res.body.posts[0]);
-                var post = res.body.posts[0];
+                const post = res.body.posts[0];
 
                 post.title.should.eql('Welcome to Ghost');
 

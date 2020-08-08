@@ -1,11 +1,13 @@
 // # Pagination
 //
 // Extends Bookshelf.Model with a `fetchPage` method. Handles everything to do with paginated requests.
-var _ = require('lodash'),
-    common = require('../../lib/common'),
-    defaults,
-    paginationUtils,
-    pagination;
+const _ = require('lodash');
+
+const {i18n} = require('../../lib/common');
+const errors = require('@tryghost/errors');
+let defaults;
+let paginationUtils;
+let pagination;
 
 /**
  * ### Default pagination values
@@ -65,15 +67,16 @@ paginationUtils = {
      * @returns {pagination} pagination metadata
      */
     formatResponse: function formatResponse(totalItems, options) {
-        var calcPages = Math.ceil(totalItems / options.limit) || 0,
-            pagination = {
-                page: options.page || defaults.page,
-                limit: options.limit,
-                pages: calcPages === 0 ? 1 : calcPages,
-                total: totalItems,
-                next: null,
-                prev: null
-            };
+        const calcPages = Math.ceil(totalItems / options.limit) || 0;
+
+        const pagination = {
+            page: options.page || defaults.page,
+            limit: options.limit,
+            pages: calcPages === 0 ? 1 : calcPages,
+            total: totalItems,
+            next: null,
+            prev: null
+        };
 
         if (pagination.pages > 1) {
             if (pagination.page === 1) {
@@ -142,9 +145,10 @@ pagination = function pagination(bookshelf) {
             options = paginationUtils.parseOptions(options);
 
             // Get the table name and idAttribute for this model
-            var tableName = _.result(this.constructor.prototype, 'tableName'),
-                idAttribute = _.result(this.constructor.prototype, 'idAttribute'),
-                self = this;
+            const tableName = _.result(this.constructor.prototype, 'tableName');
+
+            const idAttribute = _.result(this.constructor.prototype, 'idAttribute');
+            const self = this;
 
             let countPromise;
             if (options.transacting) {
@@ -201,7 +205,7 @@ pagination = function pagination(bookshelf) {
                     .catch(function (err) {
                         // e.g. offset/limit reached max allowed integer value
                         if (err.errno === 20 || err.errno === 1064) {
-                            throw new common.errors.NotFoundError({message: common.i18n.t('errors.errors.pageNotFound')});
+                            throw new errors.NotFoundError({message: i18n.t('errors.errors.pageNotFound')});
                         }
 
                         throw err;
@@ -209,8 +213,8 @@ pagination = function pagination(bookshelf) {
             }).catch((err) => {
                 // CASE: SQL syntax is incorrect
                 if (err.errno === 1054 || err.errno === 1) {
-                    throw new common.errors.BadRequestError({
-                        message: common.i18n.t('errors.models.general.sql'),
+                    throw new errors.BadRequestError({
+                        message: i18n.t('errors.models.general.sql'),
                         err: err
                     });
                 }

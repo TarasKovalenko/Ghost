@@ -1,12 +1,12 @@
-const should = require('should'),
-    sinon = require('sinon'),
-    rewire = require('rewire'),
-    nock = require('nock'),
-    path = require('path'),
-    configUtils = require('../../../utils/configUtils'),
-    urlUtils = require('../../../../core/server/lib/url-utils'),
-    errors = require('@tryghost/errors'),
-    storage = require('../../../../core/server/adapters/storage');
+const should = require('should');
+const sinon = require('sinon');
+const rewire = require('rewire');
+const nock = require('nock');
+const path = require('path');
+const configUtils = require('../../../utils/configUtils');
+const urlUtils = require('../../../../core/shared/url-utils');
+const errors = require('@tryghost/errors');
+const storage = require('../../../../core/server/adapters/storage');
 
 describe('lib/image: image size', function () {
     let imageSize;
@@ -336,7 +336,7 @@ describe('lib/image: image size', function () {
 
             const requestMock = nock('https://static.wixstatic.com')
                 .get('/media/355241_d31358572a2542c5a44738ddcb59e7ea.jpg_256')
-                .socketDelay(11)
+                .delayConnection(11)
                 .reply(408);
 
             configUtils.set('times:getImageSizeTimeoutInMS', 10);

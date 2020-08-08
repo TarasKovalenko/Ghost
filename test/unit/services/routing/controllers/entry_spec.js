@@ -3,13 +3,19 @@ const sinon = require('sinon');
 const testUtils = require('../../../../utils');
 const configUtils = require('../../../../utils/configUtils');
 const urlService = require('../../../../../core/frontend/services/url');
-const urlUtils = require('../../../../../core/server/lib/url-utils');
+const urlUtils = require('../../../../../core/shared/url-utils');
 const controllers = require('../../../../../core/frontend/services/routing/controllers');
 const helpers = require('../../../../../core/frontend/services/routing/helpers');
-const EDITOR_URL = `/editor/post/`;
+const EDITOR_URL = `/#/editor/post/`;
 
 describe('Unit - services/routing/controllers/entry', function () {
-    let req, res, entryLookUpStub, secureStub, renderStub, post, page;
+    let req;
+    let res;
+    let entryLookUpStub;
+    let secureStub;
+    let renderStub;
+    let post;
+    let page;
 
     beforeEach(function () {
         post = testUtils.DataGenerator.forKnex.createPost();

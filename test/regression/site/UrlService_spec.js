@@ -5,7 +5,7 @@ const rewire = require('rewire');
 const testUtils = require('../../utils');
 const configUtils = require('../../utils/configUtils');
 const models = require('../../../core/server/models');
-const common = require('../../../core/server/lib/common');
+const {events} = require('../../../core/server/lib/common');
 const themes = require('../../../core/frontend/services/themes');
 const UrlService = rewire('../../../core/frontend/services/url/UrlService');
 
@@ -29,7 +29,10 @@ describe('Integration: services/url/UrlService', function () {
     });
 
     describe('functional: default routing set', function () {
-        let router1, router2, router3, router4;
+        let router1;
+        let router2;
+        let router3;
+        let router4;
 
         before(function (done) {
             urlService = new UrlService();
@@ -106,12 +109,12 @@ describe('Integration: services/url/UrlService', function () {
                 }
             });
 
-            common.events.emit('router.created', router1);
-            common.events.emit('router.created', router2);
-            common.events.emit('router.created', router3);
-            common.events.emit('router.created', router4);
+            events.emit('router.created', router1);
+            events.emit('router.created', router2);
+            events.emit('router.created', router3);
+            events.emit('router.created', router4);
 
-            common.events.emit('db.ready');
+            events.emit('db.ready');
 
             let timeout;
             (function retry() {
@@ -203,7 +206,11 @@ describe('Integration: services/url/UrlService', function () {
     });
 
     describe('functional: extended/modified routing set', function () {
-        let router1, router2, router3, router4, router5;
+        let router1;
+        let router2;
+        let router3;
+        let router4;
+        let router5;
 
         before(testUtils.teardownDb);
         before(testUtils.setup('users:roles', 'posts'));
@@ -305,13 +312,13 @@ describe('Integration: services/url/UrlService', function () {
                 }
             });
 
-            common.events.emit('router.created', router1);
-            common.events.emit('router.created', router2);
-            common.events.emit('router.created', router3);
-            common.events.emit('router.created', router4);
-            common.events.emit('router.created', router5);
+            events.emit('router.created', router1);
+            events.emit('router.created', router2);
+            events.emit('router.created', router3);
+            events.emit('router.created', router4);
+            events.emit('router.created', router5);
 
-            common.events.emit('db.ready');
+            events.emit('db.ready');
 
             let timeout;
             (function retry() {
@@ -401,7 +408,11 @@ describe('Integration: services/url/UrlService', function () {
     });
 
     describe('functional: subdirectory', function () {
-        let router1, router2, router3, router4, router5;
+        let router1;
+        let router2;
+        let router3;
+        let router4;
+        let router5;
 
         beforeEach(function (done) {
             configUtils.set('url', 'http://localhost:2388/blog/');
@@ -498,13 +509,13 @@ describe('Integration: services/url/UrlService', function () {
                 }
             });
 
-            common.events.emit('router.created', router1);
-            common.events.emit('router.created', router2);
-            common.events.emit('router.created', router3);
-            common.events.emit('router.created', router4);
-            common.events.emit('router.created', router5);
+            events.emit('router.created', router1);
+            events.emit('router.created', router2);
+            events.emit('router.created', router3);
+            events.emit('router.created', router4);
+            events.emit('router.created', router5);
 
-            common.events.emit('db.ready');
+            events.emit('db.ready');
 
             let timeout;
             (function retry() {

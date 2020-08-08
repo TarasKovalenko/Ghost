@@ -1,7 +1,7 @@
 const _ = require('lodash');
 const should = require('should');
 const supertest = require('supertest');
-const config = require('../../../core/server/config');
+const config = require('../../../core/shared/config');
 const testUtils = require('../../utils');
 const localUtils = require('./utils');
 
@@ -264,6 +264,67 @@ describe('Integrations API', function () {
                                 should.equal(updatedIntegration.name, 'Awesome Integration Name');
                                 should.equal(updatedIntegration.description, 'Finally got round to writing this...');
                                 done();
+                            });
+                    });
+            });
+    });
+
+    it('Can successfully refresh an integration api key', function (done) {
+        request.post(localUtils.API.getApiQuery('integrations/?include=api_keys'))
+            .set('Origin', config.get('url'))
+            .send({
+                integrations: [{
+                    name: 'Rubbish Integration Name'
+                }]
+            })
+            .expect(201)
+            .end(function (err, {body}) {
+                if (err) {
+                    return done(err);
+                }
+                const [createdIntegration] = body.integrations;
+                const apiKeys = createdIntegration.api_keys;
+                const adminApiKey = apiKeys.find(key => key.type === 'admin');
+                request.post(localUtils.API.getApiQuery(`integrations/${createdIntegration.id}/api_key/${adminApiKey.id}/refresh`))
+                    .set('Origin', config.get('url'))
+                    .send({
+                        integrations: [{
+                            id: createdIntegration.id
+                        }]
+                    })
+                    .expect(200)
+                    .end(function (err) {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        request.get(localUtils.API.getApiQuery(`integrations/${createdIntegration.id}/?include=api_keys`))
+                            .set('Origin', config.get('url'))
+                            .expect('Content-Type', /json/)
+                            .expect('Cache-Control', testUtils.cacheRules.private)
+                            .expect(200)
+                            .end(function (err, {body}) {
+                                if (err) {
+                                    return done(err);
+                                }
+
+                                const [updatedIntegration] = body.integrations;
+                                const updatedAdminApiKey = updatedIntegration.api_keys.find(key => key.type === 'admin');
+                                should.equal(updatedIntegration.id, createdIntegration.id);
+                                updatedAdminApiKey.secret.should.not.eql(adminApiKey.secret);
+                                request.get(localUtils.API.getApiQuery(`actions/?filter=resource_id:${adminApiKey.id}&include=actor`))
+                                    .set('Origin', config.get('url'))
+                                    .expect('Content-Type', /json/)
+                                    .expect('Cache-Control', testUtils.cacheRules.private)
+                                    .expect(200)
+                                    .end(function (err, {body}) {
+                                        const actions = body.actions;
+                                        const refreshedAction = actions.find((action) => {
+                                            return action.event === 'refreshed';
+                                        });
+                                        should.exist(refreshedAction);
+                                        done();
+                                    });
                             });
                     });
             });

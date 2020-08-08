@@ -5,21 +5,22 @@
 // As it stands, these tests depend on the database, and as such are integration tests.
 // Mocking out the models to not touch the DB would turn these into unit tests, and should probably be done in future,
 // But then again testing real code, rather than mock code, might be more useful...
-var should = require('should'),
-    sinon = require('sinon'),
-    supertest = require('supertest'),
-    moment = require('moment'),
-    cheerio = require('cheerio'),
-    _ = require('lodash'),
-    testUtils = require('../utils'),
-    configUtils = require('../utils/configUtils'),
-    config = require('../../core/server/config'),
-    settingsCache = require('../../core/server/services/settings/cache'),
-    origCache = _.cloneDeep(settingsCache),
-    ghost = testUtils.startGhost,
-    request;
+const should = require('should');
+const sinon = require('sinon');
+const supertest = require('supertest');
+const moment = require('moment');
+const cheerio = require('cheerio');
+const _ = require('lodash');
+const testUtils = require('../utils');
+const configUtils = require('../utils/configUtils');
+const config = require('../../core/shared/config');
+const settingsCache = require('../../core/server/services/settings/cache');
+const origCache = _.cloneDeep(settingsCache);
+const ghost = testUtils.startGhost;
 
 describe('Default Frontend routing', function () {
+    let request;
+
     function doEnd(done) {
         return function (err, res) {
             if (err) {
@@ -71,7 +72,7 @@ describe('Default Frontend routing', function () {
                 .expect('Cache-Control', testUtils.cacheRules.public)
                 .expect(200)
                 .end(function (err, res) {
-                    var $ = cheerio.load(res.text);
+                    const $ = cheerio.load(res.text);
 
                     // NOTE: "Ghost" is the title from the settings.
                     $('title').text().should.equal('Ghost');
@@ -90,7 +91,7 @@ describe('Default Frontend routing', function () {
                 .expect('Cache-Control', testUtils.cacheRules.public)
                 .expect(200)
                 .end(function (err, res) {
-                    var $ = cheerio.load(res.text);
+                    const $ = cheerio.load(res.text);
 
                     // NOTE: "Ghost" is the title from the settings.
                     $('title').text().should.equal('Ghost - Ghost');
@@ -109,7 +110,7 @@ describe('Default Frontend routing', function () {
                 .expect('Cache-Control', testUtils.cacheRules.public)
                 .expect(200)
                 .end(function (err, res) {
-                    var $ = cheerio.load(res.text);
+                    const $ = cheerio.load(res.text);
 
                     // NOTE: "Ghost" is the title from the settings.
                     $('title').text().should.equal('Getting Started - Ghost');
@@ -130,7 +131,7 @@ describe('Default Frontend routing', function () {
                 .expect('Cache-Control', testUtils.cacheRules.public)
                 .expect(200)
                 .end(function (err, res) {
-                    var $ = cheerio.load(res.text);
+                    const $ = cheerio.load(res.text);
 
                     // NOTE: This is the title from the settings.
                     $('title').text().should.equal('Welcome to Ghost');
@@ -146,7 +147,7 @@ describe('Default Frontend routing', function () {
 
         it('should not work with date permalinks', function (done) {
             // get today's date
-            var date = moment().format('YYYY/MM/DD');
+            const date = moment().format('YYYY/MM/DD');
 
             request.get('/' + date + '/welcome/')
                 .expect('Cache-Control', testUtils.cacheRules.private)
@@ -159,7 +160,7 @@ describe('Default Frontend routing', function () {
     describe('Post edit', function () {
         it('should redirect to editor', function (done) {
             request.get('/welcome/edit/')
-                .expect('Location', /ghost\/editor\/\w+/)
+                .expect('Location', /ghost\/#\/editor\/\w+/)
                 .expect('Cache-Control', testUtils.cacheRules.public)
                 .expect(302)
                 .end(doEnd(done));
@@ -212,17 +213,17 @@ describe('Default Frontend routing', function () {
                         return done(err);
                     }
 
-                    var $ = cheerio.load(res.text);
+                    const $ = cheerio.load(res.text);
 
                     should.not.exist(res.headers['x-cache-invalidate']);
                     should.not.exist(res.headers['X-CSRF-Token']);
                     should.not.exist(res.headers['set-cookie']);
                     should.exist(res.headers.date);
 
-                    $('title').text().should.equal('Welcome to Ghost');
+                    $('.post-title').text().should.equal('Welcome to Ghost');
 
                     $('.content .post').length.should.equal(1);
-                    $('.poweredby').text().should.equal('Proudly published with Ghost');
+                    $('.powered').text().should.equal(' Published with Ghost');
                     $('body.amp-template').length.should.equal(1);
                     $('article.post').length.should.equal(1);
 
@@ -232,7 +233,7 @@ describe('Default Frontend routing', function () {
 
         it('should not work with date permalinks', function (done) {
             // get today's date
-            var date = moment().format('YYYY/MM/DD');
+            const date = moment().format('YYYY/MM/DD');
 
             request.get('/' + date + '/welcome/amp/')
                 .expect('Cache-Control', testUtils.cacheRules.private)
@@ -418,6 +419,19 @@ describe('Default Frontend routing', function () {
                 .end(doEnd(done));
         });
 
+        it('/private/?r=%2Fwelcome%2F should not redirect', function (done) {
+            request.get('/private/?r=%2Fwelcome%2F')
+                .expect(200)
+                .end(doEnd(done));
+        });
+
+        it('should redirect, NOT 404 for private route with extra path', function (done) {
+            request.get('/private/welcome/')
+                .expect('Location', '/private/?r=%2Fprivate%2Fwelcome%2F')
+                .expect(302)
+                .end(doEnd(done));
+        });
+
         it('should still serve private RSS feed', function (done) {
             request.get(`/${settingsCache.get('public_hash')}/rss/`)
                 .expect(200)
@@ -425,6 +439,45 @@ describe('Default Frontend routing', function () {
                 .expect('Content-Type', 'text/xml; charset=utf-8')
                 .end(function (err, res) {
                     res.text.should.match(/<!\[CDATA\[Welcome to Ghost\]\]>/);
+                    doEnd(done)(err, res);
+                });
+        });
+
+        it('should still serve private tag RSS feed', function (done) {
+            request.get(`/tag/getting-started/${settingsCache.get('public_hash')}/rss/`)
+                .expect(200)
+                .expect('Cache-Control', testUtils.cacheRules.private)
+                .expect('Content-Type', 'text/xml; charset=utf-8')
+                .end(function (err, res) {
+                    res.text.should.match(/<!\[CDATA\[Welcome to Ghost\]\]>/);
+                    doEnd(done)(err, res);
+                });
+        });
+
+        it('should redirect, NOT 404 for private tag RSS feed with extra path', function (done) {
+            request.get(`/tag/getting-started/${settingsCache.get('public_hash')}/rss/hack/`)
+                .expect('Location', `/private/?r=%2Ftag%2Fgetting-started%2F${settingsCache.get('public_hash')}%2Frss%2Fhack%2F`)
+                .expect(302)
+                .end(doEnd(done));
+        });
+
+        // NOTE: this case is covered by extra error handling, and cannot be unit tested
+        it('should redirect, NOT 404 for unknown private RSS feed', function (done) {
+            // NOTE: the redirect will be to /hack/rss because we strip the hash from the URL before trying to serve RSS
+            // This isn't ideal, but it's better to expose this internal logic than it is a 404 page
+            request.get(`/hack/${settingsCache.get('public_hash')}/rss/`)
+                .expect('Location', '/private/?r=%2Fhack%2Frss%2F')
+                .expect(302)
+                .end(doEnd(done));
+        });
+
+        // NOTE: this test extends the unit test, checking that there is no other robots.txt middleware overriding private blogging
+        it('should serve private robots.txt', function (done) {
+            request.get('/robots.txt')
+                .expect('Cache-Control', 'public, max-age=3600000')
+                .expect(200)
+                .end(function (err, res) {
+                    res.text.should.match('User-agent: *\nDisallow: /');
                     doEnd(done)(err, res);
                 });
         });

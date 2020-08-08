@@ -145,6 +145,28 @@ module.exports = {
     },
     settings: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
+        group: {
+            type: 'string',
+            maxlength: 50,
+            nullable: false,
+            defaultTo: 'core',
+            validations: {
+                isIn: [[
+                    'amp',
+                    'core',
+                    'email',
+                    'labs',
+                    'members',
+                    'portal',
+                    'private',
+                    'site',
+                    'slack',
+                    'theme',
+                    'unsplash',
+                    'views'
+                ]]
+            }
+        },
         key: {type: 'string', maxlength: 50, nullable: false, unique: true},
         value: {type: 'text', maxlength: 65535, nullable: true},
         type: {
@@ -152,8 +174,18 @@ module.exports = {
             maxlength: 50,
             nullable: false,
             defaultTo: 'core',
-            validations: {isIn: [['core', 'blog', 'theme', 'private', 'members', 'bulk_email']]}
+            validations: {
+                isIn: [[
+                    'array',
+                    'string',
+                    'number',
+                    'boolean',
+                    // TODO: `object` type needs to be removed once all existing object settings are removed
+                    'object'
+                ]]
+            }
         },
+        flags: {type: 'string', maxlength: 50, nullable: true},
         created_at: {type: 'dateTime', nullable: false},
         created_by: {type: 'string', maxlength: 24, nullable: false},
         updated_at: {type: 'dateTime', nullable: true},
@@ -173,8 +205,18 @@ module.exports = {
             defaultTo: 'public',
             validations: {isIn: [['public', 'internal']]}
         },
+        og_image: {type: 'string', maxlength: 2000, nullable: true},
+        og_title: {type: 'string', maxlength: 300, nullable: true},
+        og_description: {type: 'string', maxlength: 500, nullable: true},
+        twitter_image: {type: 'string', maxlength: 2000, nullable: true},
+        twitter_title: {type: 'string', maxlength: 300, nullable: true},
+        twitter_description: {type: 'string', maxlength: 500, nullable: true},
         meta_title: {type: 'string', maxlength: 2000, nullable: true, validations: {isLength: {max: 300}}},
         meta_description: {type: 'string', maxlength: 2000, nullable: true, validations: {isLength: {max: 500}}},
+        codeinjection_head: {type: 'text', maxlength: 65535, nullable: true},
+        codeinjection_foot: {type: 'text', maxlength: 65535, nullable: true},
+        canonical_url: {type: 'string', maxlength: 2000, nullable: true},
+        accent_color: {type: 'string', maxlength: 50, nullable: true},
         created_at: {type: 'dateTime', nullable: false},
         created_by: {type: 'string', maxlength: 24, nullable: false},
         updated_at: {type: 'dateTime', nullable: true},
@@ -345,15 +387,14 @@ module.exports = {
     },
     members_labels: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
-        member_id: {type: 'string', maxlength: 24, nullable: false, references: 'members.id'},
-        label_id: {type: 'string', maxlength: 24, nullable: false, references: 'labels.id'},
+        member_id: {type: 'string', maxlength: 24, nullable: false, references: 'members.id', cascadeDelete: true},
+        label_id: {type: 'string', maxlength: 24, nullable: false, references: 'labels.id', cascadeDelete: true},
         sort_order: {type: 'integer', nullable: false, unsigned: true, defaultTo: 0}
     },
     members_stripe_customers: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
-        member_id: {type: 'string', maxlength: 24, nullable: false, unique: false},
-        // customer_id is unique: false because mysql with innodb utf8mb4 cannot have unqiue columns larger than 191 chars
-        customer_id: {type: 'string', maxlength: 255, nullable: false, unique: false},
+        member_id: {type: 'string', maxlength: 24, nullable: false, unique: false, references: 'members.id', cascadeDelete: true},
+        customer_id: {type: 'string', maxlength: 255, nullable: false, unique: true},
         name: {type: 'string', maxlength: 191, nullable: true},
         email: {type: 'string', maxlength: 191, nullable: true},
         created_at: {type: 'dateTime', nullable: false},
@@ -363,8 +404,8 @@ module.exports = {
     },
     members_stripe_customers_subscriptions: {
         id: {type: 'string', maxlength: 24, nullable: false, primary: true},
-        customer_id: {type: 'string', maxlength: 255, nullable: false, unique: false},
-        subscription_id: {type: 'string', maxlength: 255, nullable: false, unique: false},
+        customer_id: {type: 'string', maxlength: 255, nullable: false, unique: false, references: 'members_stripe_customers.customer_id', cascadeDelete: true},
+        subscription_id: {type: 'string', maxlength: 255, nullable: false, unique: true},
         plan_id: {type: 'string', maxlength: 255, nullable: false, unique: false},
         status: {type: 'string', maxlength: 50, nullable: false},
         cancel_at_period_end: {type: 'bool', nullable: false, defaultTo: false},

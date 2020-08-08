@@ -1,14 +1,27 @@
 const _ = require('lodash');
 const Ajv = require('ajv');
 const stripKeyword = require('./strip-keyword');
-const common = require('../../../../../lib/common');
+const isLowercaseKeyword = require('./is-lowercase-keyword');
+const {i18n} = require('../../../../../lib/common');
+const errors = require('@tryghost/errors');
 
 const ajv = new Ajv({
     allErrors: true,
-    useDefaults: true
+    useDefaults: true,
+    formats: {
+        'json-string': (data) => {
+            try {
+                JSON.parse(data);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+    }
 });
 
 stripKeyword(ajv);
+isLowercaseKeyword(ajv);
 
 const getValidation = (schema, def) => {
     if (!ajv.getSchema(def.$id)) {
@@ -32,8 +45,8 @@ const validate = (schema, definition, data) => {
             key = schema.$id.split('.')[0];
         }
 
-        return Promise.reject(new common.errors.ValidationError({
-            message: common.i18n.t('notices.data.validation.index.schemaValidationFailed', {
+        return Promise.reject(new errors.ValidationError({
+            message: i18n.t('notices.data.validation.index.schemaValidationFailed', {
                 key: key
             }),
             property: key,

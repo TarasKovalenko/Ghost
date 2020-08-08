@@ -12,6 +12,7 @@
                 "sampleBlogDescription": "Thoughts, stories and ideas.",
                 "mail": {
                     "resetPassword": "Reset Password",
+                    "resetPasswordRequired": "Reset Password",
                     "checkEmailForInstructions": "Check your email for further instructions.",
                     "passwordChanged": "Password changed successfully.",
                     "invitationAccepted": "Invitation accepted.",
@@ -227,7 +228,6 @@
                     "help": "Visit and save your profile after logging in to check for problems."
                 },
                 "incorrectPassword": "Your password is incorrect.",
-                "accountLocked": "Your account is locked. Please reset your password to log in again by clicking the \"Forgotten password?\" link!",
                 "accountSuspended": "Your account was suspended.",
                 "newPasswordsDoNotMatch": "Your new passwords do not match",
                 "passwordRequiredForOperation": "Password is required for this operation",
@@ -351,6 +351,7 @@
             "settings": {
                 "problemFindingSetting": "Problem finding setting: {key}",
                 "accessCoreSettingFromExtReq": "Attempted to access core setting from external request",
+                "invalidEmailReceived": "Please send a valid email",
                 "activeThemeSetViaAPI": {
                     "error": "Attempted to change active_theme via settings API",
                     "help": "Please activate theme via the themes API endpoints instead"
@@ -367,13 +368,31 @@
             },
             "members": {
                 "memberNotFound": "Member not found.",
-                "memberAlreadyExists": "Email address is already member."
+                "memberAlreadyExists": {
+                    "message": "Member already exists",
+                    "context": "Attempting to add member with existing email address."
+                },
+                "stripeNotConnected": {
+                    "message": "Missing Stripe connection",
+                    "context": "Attempting to import members with Stripe data when there is no Stripe account connected",
+                    "help": "You need to connect to Stripe to import Stripe customers. "
+                },
+                "stripeCustomerNotFound": {
+                    "context": "Missing Stripe customer.",
+                    "help": "Make sure you’re connected to the correct Stripe Account."
+                },
+                "duplicateStripeCustomerIds": {
+                    "message": "Duplicate Stripe ID",
+                    "context": "Attempting to import members with duplicate Stripe customer ids.",
+                    "help": "Remove duplicate Stripe customer IDs from the CSV and re-run the import."
+                }
             },
             "tags": {
                 "tagNotFound": "Tag not found."
             },
             "labels": {
-                "labelNotFound": "Label not found."
+                "labelNotFound": "Label not found.",
+                "labelAlreadyExists": "Label already exists"
             },
             "themes": {
                 "noPermissionToBrowseThemes": "You do not have permission to browse themes.",
@@ -429,10 +448,18 @@
                 "notAllowedToInvite": "Not allowed to invite this role."
             },
             "webhooks": {
+                "noPermissionToEdit": {
+                    "message": "You do not have permission to {method} this webhook.",
+                    "context": "You may only {method} webhooks that belong to the authenticated integration. Check the supplied Admin API Key."
+                },
+                "noIntegrationIdProvided": {
+                    "context": "You may only create webhooks with 'integration_id' when using session authentication."
+                },
                 "webhookAlreadyExists": "Target URL has already been used for this event."
             },
             "oembed": {
                 "noUrlProvided": "No url provided.",
+                "insufficientMetadata": "URL contains insufficient metadata.",
                 "unknownProvider": "No provider found for supplied URL."
             },
             "userMessages": {

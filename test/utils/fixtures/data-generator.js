@@ -1,12 +1,12 @@
-var _ = require('lodash'),
-    uuid = require('uuid'),
-    ObjectId = require('bson-objectid'),
-    moment = require('moment'),
-    constants = require('../../../core/server/lib/constants'),
-    DataGenerator = {};
+const _ = require('lodash');
+const uuid = require('uuid');
+const ObjectId = require('bson-objectid');
+const moment = require('moment');
+const constants = require('../../../core/server/lib/constants');
+const DataGenerator = {};
 
 DataGenerator.markdownToMobiledoc = function markdownToMobiledoc(content) {
-    var mobiledoc = {
+    const mobiledoc = {
         version: '0.3.1',
         markups: [],
         atoms: [],
@@ -316,6 +316,52 @@ DataGenerator.Content = {
         {
             id: ObjectId.generate(),
             email: 'member2@test.com'
+        },
+        {
+            id: ObjectId.generate(),
+            email: 'paid@test.com',
+            name: 'Egon Spengler'
+        }
+    ],
+
+    labels: [
+        {
+            id: ObjectId.generate(),
+            name: 'Label 1',
+            slug: 'label-1'
+        },
+        {
+            id: ObjectId.generate(),
+            name: 'Label 2',
+            slug: 'label-2'
+        }
+    ],
+
+    members_stripe_customers: [
+        {
+            id: ObjectId.generate(),
+            member_id: null, // relation added later
+            customer_id: 'cus_HR3tBmNhx4QsZY',
+            name: 'Egon Spengler',
+            email: 'paid@test.com'
+        }
+    ],
+
+    members_stripe_customers_subscriptions: [
+        {
+            id: ObjectId.generate(),
+            customer_id: 'cus_HR3tBmNhx4QsZY',
+            subscription_id: 'sub_HR3tLNgGAHsa7b',
+            plan_id: '173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730bb8',
+            status: 'active',
+            cancel_at_period_end: false,
+            current_period_end: '2020-07-09 19:01:20',
+            start_date: '2020-06-09 19:01:20',
+            default_payment_card_last4: '4242',
+            plan_nickname: 'Monthly',
+            plan_interval: 'month',
+            plan_amount: '1000',
+            plan_currency: 'usd'
         }
     ],
 
@@ -398,10 +444,11 @@ DataGenerator.Content.api_keys[0].integration_id = DataGenerator.Content.integra
 DataGenerator.Content.api_keys[1].integration_id = DataGenerator.Content.integrations[0].id;
 DataGenerator.Content.emails[0].post_id = DataGenerator.Content.posts[0].id;
 DataGenerator.Content.emails[1].post_id = DataGenerator.Content.posts[1].id;
+DataGenerator.Content.members_stripe_customers[0].member_id = DataGenerator.Content.members[2].id;
 
 DataGenerator.forKnex = (function () {
     function createBasic(overrides) {
-        var newObj = _.cloneDeep(overrides);
+        const newObj = _.cloneDeep(overrides);
 
         return _.defaults(newObj, {
             id: ObjectId.generate(),
@@ -413,7 +460,7 @@ DataGenerator.forKnex = (function () {
     }
 
     function createTag(overrides) {
-        var newObj = _.cloneDeep(overrides);
+        const newObj = _.cloneDeep(overrides);
 
         return _.defaults(newObj, {
             id: ObjectId.generate(),
@@ -434,8 +481,8 @@ DataGenerator.forKnex = (function () {
     function createPost(overrides) {
         overrides = overrides || {};
 
-        var newObj = _.cloneDeep(overrides),
-            mobiledocObj;
+        const newObj = _.cloneDeep(overrides);
+        let mobiledocObj;
 
         if (!newObj.mobiledoc) {
             newObj.mobiledoc = DataGenerator.markdownToMobiledoc('## markdown');
@@ -485,7 +532,7 @@ DataGenerator.forKnex = (function () {
     }
 
     function createUser(overrides) {
-        var newObj = _.cloneDeep(overrides || {});
+        const newObj = _.cloneDeep(overrides || {});
 
         if (!newObj.slug) {
             newObj.slug = 'slug_' + Date.now();
@@ -515,8 +562,8 @@ DataGenerator.forKnex = (function () {
     function createClient(overrides) {
         overrides = overrides || {};
 
-        var newObj = _.cloneDeep(overrides),
-            basics = createBasic(newObj);
+        const newObj = _.cloneDeep(overrides);
+        const basics = createBasic(newObj);
 
         return _.defaults(newObj, {
             id: ObjectId.generate(),
@@ -574,6 +621,29 @@ DataGenerator.forKnex = (function () {
         });
     }
 
+    function createLabel(overrides) {
+        const newObj = _.cloneDeep(overrides);
+
+        return _.defaults(newObj, {
+            id: ObjectId.generate(),
+            name: 'label',
+            slug: 'slug',
+            created_by: DataGenerator.Content.users[0].id,
+            created_at: new Date(),
+            updated_by: DataGenerator.Content.users[0].id,
+            updated_at: new Date()
+        });
+    }
+
+    function createMembersLabels(member_id, label_id, sort_order = 0) {
+        return {
+            id: ObjectId.generate(),
+            member_id,
+            label_id,
+            sort_order
+        };
+    }
+
     function createSetting(overrides) {
         const newObj = _.cloneDeep(overrides);
 
@@ -582,7 +652,7 @@ DataGenerator.forKnex = (function () {
             uuid: '95ce1c53-69b0-4f5f-be91-d3aeb39046b5',
             key: 'title',
             value: null,
-            type: 'blog',
+            type: 'site',
             created_at: new Date(),
             created_by: DataGenerator.Content.users[0].id,
             updated_at: new Date(),
@@ -591,7 +661,7 @@ DataGenerator.forKnex = (function () {
     }
 
     function createToken(overrides) {
-        var newObj = _.cloneDeep(overrides);
+        const newObj = _.cloneDeep(overrides);
 
         return _.defaults(newObj, {
             id: ObjectId.generate(),
@@ -601,7 +671,7 @@ DataGenerator.forKnex = (function () {
     }
 
     function createInvite(overrides) {
-        var newObj = _.cloneDeep(overrides);
+        const newObj = _.cloneDeep(overrides);
 
         return _.defaults(newObj, {
             id: ObjectId.generate(),
@@ -616,7 +686,7 @@ DataGenerator.forKnex = (function () {
     }
 
     function createWebhook(overrides) {
-        var newObj = _.cloneDeep(overrides);
+        const newObj = _.cloneDeep(overrides);
 
         return _.defaults(newObj, {
             id: ObjectId.generate(),
@@ -630,7 +700,7 @@ DataGenerator.forKnex = (function () {
     }
 
     function createIntegration(overrides) {
-        var newObj = _.cloneDeep(overrides);
+        const newObj = _.cloneDeep(overrides);
 
         return _.defaults(newObj, {
             id: ObjectId.generate(),
@@ -837,47 +907,81 @@ DataGenerator.forKnex = (function () {
         createBasic(DataGenerator.Content.emails[1])
     ];
 
+    const members = [
+        createMember(DataGenerator.Content.members[0]),
+        createMember(DataGenerator.Content.members[1]),
+        createMember(DataGenerator.Content.members[2])
+    ];
+
+    const labels = [
+        createLabel(DataGenerator.Content.labels[0])
+    ];
+
+    const members_labels = [
+        createMembersLabels(
+            DataGenerator.Content.members[0].id,
+            DataGenerator.Content.labels[0].id
+        )
+    ];
+
+    const members_stripe_customers = [
+        createBasic(DataGenerator.Content.members_stripe_customers[0])
+    ];
+
+    const stripe_customer_subscriptions = [
+        createBasic(DataGenerator.Content.members_stripe_customers_subscriptions[0])
+    ];
+
     return {
-        createPost: createPost,
-        createGenericPost: createGenericPost,
-        createTag: createTag,
-        createUser: createUser,
-        createUsersRoles: createUsersRoles,
-        createPostsAuthors: createPostsAuthors,
-        createClient: createClient,
-        createGenericUser: createGenericUser,
-        createBasic: createBasic,
+        createPost,
+        createGenericPost,
+        createTag,
+        createUser,
+        createUsersRoles,
+        createPostsAuthors,
+        createClient,
+        createGenericUser,
+        createBasic,
         createRole: createBasic,
         createPermission: createBasic,
-        createPostsTags: createPostsTags,
-        createSetting: createSetting,
-        createToken: createToken,
-        createMember: createMember,
-        createInvite: createInvite,
-        createWebhook: createWebhook,
-        createIntegration: createIntegration,
+        createPostsTags,
+        createSetting,
+        createToken,
+        createMember,
+        createLabel,
+        createMembersLabels,
+        createMembersStripeCustomer: createBasic,
+        createStripeCustomerSubscription: createBasic,
+        createInvite,
+        createWebhook,
+        createIntegration,
 
-        invites: invites,
-        posts: posts,
-        tags: tags,
-        posts_tags: posts_tags,
-        posts_authors: posts_authors,
-        roles: roles,
-        users: users,
-        roles_users: roles_users,
-        webhooks: webhooks,
-        integrations: integrations,
-        api_keys: api_keys,
-        emails: emails
+        invites,
+        posts,
+        tags,
+        posts_tags,
+        posts_authors,
+        roles,
+        users,
+        roles_users,
+        webhooks,
+        integrations,
+        api_keys,
+        emails,
+        labels,
+        members,
+        members_labels,
+        members_stripe_customers,
+        stripe_customer_subscriptions
     };
 }());
 
 // @TODO: this logic only exists because we are now using our models :/
 DataGenerator.forModel = (function () {
-    var posts,
-        tags,
-        users,
-        roles;
+    let posts;
+    let tags;
+    let users;
+    let roles;
 
     posts = _.map(DataGenerator.Content.posts, function (post) {
         return _.pick(post, 'title', 'mobiledoc');

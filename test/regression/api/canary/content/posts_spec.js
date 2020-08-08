@@ -8,7 +8,7 @@ const testUtils = require('../../../../utils');
 const localUtils = require('./utils');
 const configUtils = require('../../../../utils/configUtils');
 const urlUtils = require('../../../../utils/urlUtils');
-const config = require('../../../../../core/server/config');
+const config = require('../../../../../core/shared/config');
 
 const ghost = testUtils.startGhost;
 let request;
@@ -46,7 +46,7 @@ describe('api/canary/content/posts', function () {
                 should.exist(res.headers['access-control-allow-origin']);
                 should.not.exist(res.headers['x-cache-invalidate']);
 
-                var jsonResponse = res.body;
+                const jsonResponse = res.body;
                 should.exist(jsonResponse.posts);
                 localUtils.API.checkResponse(jsonResponse, 'posts');
                 jsonResponse.posts.should.have.length(11);
@@ -87,7 +87,7 @@ describe('api/canary/content/posts', function () {
                 should.exist(res.headers['access-control-allow-origin']);
                 should.not.exist(res.headers['x-cache-invalidate']);
 
-                var jsonResponse = res.body;
+                const jsonResponse = res.body;
                 should.exist(jsonResponse.posts);
                 localUtils.API.checkResponse(jsonResponse, 'posts');
                 jsonResponse.posts.should.have.length(11);
@@ -176,6 +176,36 @@ describe('api/canary/content/posts', function () {
                 jsonResponse.posts.should.be.an.Array().with.lengthOf(11);
 
                 done();
+            });
+    });
+
+    it('browse posts with slug filter, should order in slug order', function () {
+        return request.get(localUtils.API.getApiQuery(`posts/?key=${validKey}&filter=slug:[themes,ghostly-kitchen-sink,the-editor]`))
+            .expect('Content-Type', /json/)
+            .expect('Cache-Control', testUtils.cacheRules.private)
+            .expect(200)
+            .then((res) => {
+                const jsonResponse = res.body;
+
+                jsonResponse.posts.should.be.an.Array().with.lengthOf(3);
+                jsonResponse.posts[0].slug.should.equal('themes');
+                jsonResponse.posts[1].slug.should.equal('ghostly-kitchen-sink');
+                jsonResponse.posts[2].slug.should.equal('the-editor');
+            });
+    });
+
+    it('browse posts with slug filter should order taking order parameter into account', function () {
+        return request.get(localUtils.API.getApiQuery(`posts/?key=${validKey}&order=slug%20DESC&filter=slug:[themes,ghostly-kitchen-sink,the-editor]`))
+            .expect('Content-Type', /json/)
+            .expect('Cache-Control', testUtils.cacheRules.private)
+            .expect(200)
+            .then((res) => {
+                const jsonResponse = res.body;
+
+                jsonResponse.posts.should.be.an.Array().with.lengthOf(3);
+                jsonResponse.posts[0].slug.should.equal('themes');
+                jsonResponse.posts[1].slug.should.equal('the-editor');
+                jsonResponse.posts[2].slug.should.equal('ghostly-kitchen-sink');
             });
     });
 
@@ -347,7 +377,7 @@ describe('api/canary/content/posts', function () {
                     should.exist(jsonResponse.posts);
                     localUtils.API.checkResponse(jsonResponse, 'posts');
                     jsonResponse.posts.should.have.length(14);
-                    localUtils.API.checkResponse(jsonResponse.posts[0], 'post');
+                    localUtils.API.checkResponse(jsonResponse.posts[0], 'post', null, null);
                     localUtils.API.checkResponse(jsonResponse.meta.pagination, 'pagination');
                     _.isBoolean(jsonResponse.posts[0].featured).should.eql(true);
 

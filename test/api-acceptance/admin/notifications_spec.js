@@ -1,7 +1,7 @@
 const should = require('should');
 const supertest = require('supertest');
 const testUtils = require('../../utils');
-const config = require('../../../core/server/config');
+const config = require('../../../core/shared/config');
 const localUtils = require('./utils');
 
 const ghost = testUtils.startGhost;
@@ -36,7 +36,7 @@ describe('Notifications API', function () {
             .expect('Cache-Control', testUtils.cacheRules.private)
             .expect(201)
             .then(function (res) {
-                var jsonResponse = res.body;
+                const jsonResponse = res.body;
 
                 should.exist(jsonResponse.notifications);
 

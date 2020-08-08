@@ -6,7 +6,7 @@ const gating = require('./post-gating');
 const clean = require('./clean');
 const extraAttrs = require('./extra-attrs');
 const postsMetaSchema = require('../../../../../../data/schema').tables.posts_meta;
-const config = require('../../../../../../config');
+const config = require('../../../../../../../shared/config');
 
 const mapUser = (model, frame) => {
     const jsonModel = model.toJSON ? model.toJSON(frame.options) : model;
@@ -92,7 +92,6 @@ const mapPage = (model, frame) => {
 const mapSettings = (attrs, frame) => {
     url.forSettings(attrs);
     extraAttrs.forSettings(attrs, frame);
-    clean.settings(attrs, frame);
 
     // NOTE: The cleanup of deprecated ghost_head/ghost_foot has to happen here
     //       because codeinjection_head/codeinjection_foot are assigned on a previous
@@ -100,16 +99,14 @@ const mapSettings = (attrs, frame) => {
     //      fields completely.
     if (_.isArray(attrs)) {
         attrs = _.filter(attrs, (o) => {
-            if (o.key === 'brand' && !config.get('enableDeveloperExperiments')) {
+            if (o.key === 'accent_color' && !config.get('enableDeveloperExperiments')) {
                 return false;
             }
             return o.key !== 'ghost_head' && o.key !== 'ghost_foot';
         });
     } else {
-        delete attrs.ghost_head;
-        delete attrs.ghost_foot;
         if (!config.get('enableDeveloperExperiments')) {
-            delete attrs.brand;
+            delete attrs.accent_color;
         }
     }
 

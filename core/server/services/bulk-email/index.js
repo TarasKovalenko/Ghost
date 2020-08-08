@@ -1,9 +1,12 @@
 const _ = require('lodash');
-const common = require('../../lib/common');
+const errors = require('@tryghost/errors');
+const {i18n} = require('../../lib/common');
+const logging = require('../../../shared/logging');
 const mailgunProvider = require('./mailgun');
-const configService = require('../../config');
+const configService = require('../../../shared/config');
 const settingsCache = require('../settings/cache');
-const sentry = require('../../sentry');
+const sentry = require('../../../shared/sentry');
+const debug = require('ghost-ignition').debug('mega');
 
 /**
  * An object representing batch request result
@@ -23,10 +26,18 @@ class SuccessfulBatch extends BatchResultBase {
 class FailedBatch extends BatchResultBase {
     constructor(error, data) {
         super();
+        error.originalMessage = error.message;
 
-        // give a better error message for the invalid credentials state
-        if (error.message === 'Forbidden') {
-            error.message = 'Invalid Mailgun credentials';
+        if (error.statusCode >= 500) {
+            error.message = 'Email service is currently unavailable - please try again';
+        } else if (error.statusCode === 401) {
+            error.message = 'Email failed to send - please verify your credentials';
+        } else if (error.message && error.message.toLowerCase().includes('dmarc')) {
+            error.message = 'Unable to send email from domains implementing strict DMARC policies';
+        } else if (error.message.includes(`'to' parameter is not a valid address`)) {
+            error.message = 'Recipient is not a valid address';
+        } else {
+            error.message = 'Email failed to send - please verify your email settings';
         }
 
         this.error = error;
@@ -64,17 +75,17 @@ module.exports = {
         let fromAddress = message.from;
         if (/@localhost$/.test(message.from) || /@ghost.local$/.test(message.from)) {
             fromAddress = 'localhost@example.com';
-            common.logging.warn(`Rewriting bulk email from address ${message.from} to ${fromAddress}`);
+            logging.warn(`Rewriting bulk email from address ${message.from} to ${fromAddress}`);
 
             BATCH_SIZE = 2;
         }
 
-        const blogTitle = settingsCache.get('title');
-        fromAddress = blogTitle ? `${blogTitle}<${fromAddress}>` : fromAddress;
+        const blogTitle = settingsCache.get('title') ? settingsCache.get('title').replace(/"/g, '\\"') : '';
+        fromAddress = blogTitle ? `"${blogTitle}"<${fromAddress}>` : fromAddress;
 
         const chunkedRecipients = _.chunk(recipients, BATCH_SIZE);
 
-        return Promise.mapSeries(chunkedRecipients, (toAddresses) => {
+        return Promise.map(chunkedRecipients, (toAddresses, chunkIndex) => {
             const recipientVariables = {};
             toAddresses.forEach((email) => {
                 recipientVariables[email] = recipientData[email];
@@ -94,29 +105,43 @@ module.exports = {
                 });
             }
 
+            if (bulkEmailConfig && bulkEmailConfig.mailgun && bulkEmailConfig.mailgun.testmode) {
+                Object.assign(batchData, {
+                    'o:testmode': true
+                });
+            }
+
             const messageData = Object.assign({}, message, batchData);
 
+            // Rename plaintext field to text for Mailgun
+            messageData.text = messageData.plaintext;
+            delete messageData.plaintext;
+
             return new Promise((resolve) => {
+                const batchStartTime = Date.now();
+                debug(`sending message batch ${chunkIndex + 1} to ${toAddresses.length}`);
                 mailgunInstance.messages().send(messageData, (error, body) => {
                     if (error) {
                         // NOTE: logging an error here only but actual handling should happen in more sophisticated batch retry handler
                         // REF: possible mailgun errors https://documentation.mailgun.com/en/latest/api-intro.html#errors
-                        let ghostError = new common.errors.GhostError({
+                        let ghostError = new errors.EmailError({
                             err: error,
-                            context: common.i18n.t('errors.services.mega.requestFailed.error')
+                            context: i18n.t('errors.services.mega.requestFailed.error')
                         });
 
                         sentry.captureException(ghostError);
-                        common.logging.warn(ghostError);
+                        logging.warn(ghostError);
 
                         // NOTE: these are generated variables, so can be regenerated when retry is done
                         const data = _.omit(batchData, ['recipient-variables']);
+                        debug(`failed message batch ${chunkIndex + 1} (${Date.now() - batchStartTime}ms)`);
                         resolve(new FailedBatch(error, data));
                     } else {
+                        debug(`sent message batch ${chunkIndex + 1} (${Date.now() - batchStartTime}ms)`);
                         resolve(new SuccessfulBatch(body));
                     }
                 });
             });
-        });
+        }, {concurrency: 10});
     }
 };

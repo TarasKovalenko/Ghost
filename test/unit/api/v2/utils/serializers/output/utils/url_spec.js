@@ -2,7 +2,7 @@ const should = require('should');
 const sinon = require('sinon');
 const testUtils = require('../../../../../../../utils');
 const urlService = require('../../../../../../../../core/frontend/services/url');
-const urlUtils = require('../../../../../../../../core/server/lib/url-utils');
+const urlUtils = require('../../../../../../../../core/shared/url-utils');
 const urlUtil = require('../../../../../../../../core/server/api/v2/utils/serializers/output/utils/url');
 
 describe('Unit: v2/utils/serializers/output/utils/url', function () {
@@ -36,8 +36,10 @@ describe('Unit: v2/utils/serializers/output/utils/url', function () {
                 codeinjection_head: 'codeinjectionHead',
                 codeinjection_foot: 'codeinjectionFoot',
                 feature_image: 'featureImage',
-                og_image: 'ogImage',
-                twitter_image: 'twitterImage',
+                posts_meta: {
+                    og_image: 'ogImage',
+                    twitter_image: 'twitterImage'
+                },
                 canonical_url: 'canonicalUrl'
             }));
 

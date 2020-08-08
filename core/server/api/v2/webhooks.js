@@ -1,5 +1,6 @@
 const models = require('../../models');
-const common = require('../../lib/common');
+const {i18n} = require('../../lib/common');
+const errors = require('@tryghost/errors');
 
 module.exports = {
     docName: 'webhooks',
@@ -28,7 +29,7 @@ module.exports = {
             ).then((webhook) => {
                 if (webhook) {
                     return Promise.reject(
-                        new common.errors.ValidationError({message: common.i18n.t('errors.api.webhooks.webhookAlreadyExists')})
+                        new errors.ValidationError({message: i18n.t('errors.api.webhooks.webhookAlreadyExists')})
                     );
                 }
 
@@ -38,7 +39,33 @@ module.exports = {
     },
 
     edit: {
-        permissions: true,
+        permissions: {
+            before: (frame) => {
+                if (frame.options.context && frame.options.context.integration && frame.options.context.integration.id) {
+                    return models.Webhook.findOne({id: frame.options.id})
+                        .then((webhook) => {
+                            if (!webhook) {
+                                throw new errors.NotFoundError({
+                                    message: i18n.t('errors.api.resource.resourceNotFound', {
+                                        resource: 'Webhook'
+                                    })
+                                });
+                            }
+
+                            if (webhook.get('integration_id') !== frame.options.context.integration.id) {
+                                throw new errors.NoPermissionError({
+                                    message: i18n.t('errors.api.webhooks.noPermissionToEdit.message', {
+                                        method: 'edit'
+                                    }),
+                                    context: i18n.t('errors.api.webhooks.noPermissionToEdit.context', {
+                                        method: 'edit'
+                                    })
+                                });
+                            }
+                        });
+                }
+            }
+        },
         data: [
             'name',
             'event',
@@ -59,8 +86,8 @@ module.exports = {
         query({data, options}) {
             return models.Webhook.edit(data.webhooks[0], Object.assign(options, {require: true}))
                 .catch(models.Webhook.NotFoundError, () => {
-                    throw new common.errors.NotFoundError({
-                        message: common.i18n.t('errors.api.resource.resourceNotFound', {
+                    throw new errors.NotFoundError({
+                        message: i18n.t('errors.api.resource.resourceNotFound', {
                             resource: 'Webhook'
                         })
                     });
@@ -81,10 +108,44 @@ module.exports = {
                 }
             }
         },
-        permissions: true,
+        permissions: {
+            before: (frame) => {
+                if (frame.options.context && frame.options.context.integration && frame.options.context.integration.id) {
+                    return models.Webhook.findOne({id: frame.options.id})
+                        .then((webhook) => {
+                            if (!webhook) {
+                                throw new errors.NotFoundError({
+                                    message: i18n.t('errors.api.resource.resourceNotFound', {
+                                        resource: 'Webhook'
+                                    })
+                                });
+                            }
+
+                            if (webhook.get('integration_id') !== frame.options.context.integration.id) {
+                                throw new errors.NoPermissionError({
+                                    message: i18n.t('errors.api.webhooks.noPermissionToEdit.message', {
+                                        method: 'destroy'
+                                    }),
+                                    context: i18n.t('errors.api.webhooks.noPermissionToEdit.context', {
+                                        method: 'destroy'
+                                    })
+                                });
+                            }
+                        });
+                }
+            }
+        },
         query(frame) {
             frame.options.require = true;
-            return models.Webhook.destroy(frame.options).return(null);
+            return models.Webhook.destroy(frame.options)
+                .then(() => null)
+                .catch(models.Webhook.NotFoundError, () => {
+                    return Promise.reject(new errors.NotFoundError({
+                        message: i18n.t('errors.api.resource.resourceNotFound', {
+                            resource: 'Webhook'
+                        })
+                    }));
+                });
         }
     }
 };
